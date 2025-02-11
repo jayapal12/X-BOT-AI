@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Result Prediction</title>
+    <style>
+        body {
+            background: #202123;
+            color: red;
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 90%;
+            max-width: 900px;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .final-result {
+            font-size: 12px;
+            font-weight: bold;
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="typing-line">CALCULATION STARTING...</div>
+        <div id="progress"></div>
+        <div id="final-result"></div>
+    </div>
+
+    <script>
+        const API_URL = "https://91clubapi.com/api/webapi/GetNoaverageEmerdList";
+        const AUTH_TOKEN = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOiIxNzM5MjkyMzcwIiwibmJmIjoiMTczOTI5MjM3MCIsImV4cCI6IjE3MzkyOTQxNzAiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL2V4cGlyYXRpb24iOiIyLzExLzIwMjUgMTA6NDY6MTAgUE0iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBY2Nlc3NfVG9rZW4iLCJVc2VySWQiOiI0MjM2MzQzIiwiVXNlck5hbWUiOiI5MTgzMDIxODEzNTQiLCJVc2VyUGhvdG8iOiI4IiwiTmlja05hbWUiOiJNZW1iZXJOTkdUQ1BKVCIsIkFtb3VudCI6IjAuNTgiLCJJbnRlZ3JhbCI6IjAiLCJMb2dpbk1hcmsiOiJINSIsIkxvZ2luVGltZSI6IjIvMTEvMjAyNSAxMDoxNjoxMCBQTSIsIkxvZ2luSVBBZGRyZXNzIjoiMjQwMTo0OTAwOmE5YzQ6ZGJjMjo4MzM6MmNmZjpmZTdlOjNkOWMiLCJEYk51bWJlciI6IjAiLCJJc3ZhbGlkYXRvciI6IjAiLCJLZXlDb2RlIjoiNzg3IiwiVG9rZW5UeXBlIjoiQWNjZXNzX1Rva2VuIiwiUGhvbmVUeXBlIjoiMSIsIlVzZXJUeXBlIjoiMCIsIlVzZXJOYW1lMiI6IiIsImlzcyI6Imp3dElzc3VlciIsImF1ZCI6ImxvdHRlcnlUaWNrZXQifQ.jas1S4d41XzFuTzkSq2qrBlkQNSg6_Nnyeo1u4-f7ww";
+        const REQUEST_DATA = {
+            "pageSize": 10,
+            "pageNo": 1,
+            "typeId": 1,
+            "language": 0,
+            "random": "acaf1b619acb40b8ab965c4a3a367ec0",
+            "signature": "2DB967396CED8E492A79AC26601008DF",
+            "timestamp": 1739294219
+        };
+
+        const progressMessages = [
+            "RESULT CALCULATING 10% DONE",
+            "RESULT CALCULATING 20% DONE",
+            "RESULT CALCULATING 30% DONE",
+            "RESULT CALCULATING 40% DONE",
+            "RESULT CALCULATING 50% DONE",
+            "RESULT CALCULATING 60% DONE",
+            "RESULT CALCULATING 70% DONE",
+            "RESULT CALCULATING 80% DONE",
+            "RESULT CALCULATING 90% DONE",
+            "RESULT CALCULATING 100% DONE"
+        ];
+
+        let lastFetchedPeriod = null;
+        let gameResult = "Small"; // Placeholder for the final result (Small/Big)
+
+        async function fetchResults() {
+            try {
+                let response = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json;charset=UTF-8",
+                        "Accept": "application/json, text/plain, */*",
+                        "Authorization": AUTH_TOKEN
+                    },
+                    body: JSON.stringify(REQUEST_DATA)
+                });
+
+                let data = await response.json();
+                let results = data.data.list;
+
+                let latestPeriod = results[0].issueNumber;
+                let latestNumber = results[0].number;
+                gameResult = latestNumber % 2 === 0 ? "Big" : "Small"; // Use even/odd for result prediction
+
+                // Prevent processing for the same period number
+                if (latestPeriod === lastFetchedPeriod) {
+                    console.log("Already processed this period, skipping...");
+                    return; // Skip if the period number is the same as the last one
+                }
+
+                // Update last fetched period
+                lastFetchedPeriod = latestPeriod;
+
+                // Reset screen and show progress
+                resetScreen();
+                document.getElementById("typing-line").innerText = `CALCULATION STARTING...`;
+                showProgress();
+
+                // Display the prediction after the progress messages
+                setTimeout(() => {
+                    document.getElementById("final-result").innerText = `YOUR UPCOMING RESULT IS >>> ${gameResult} PREDICTION BY X-BOT-AI PRESENT BY <<<JAYAPAL>>>`;
+                }, progressMessages.length * 700 + 1000);
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                document.getElementById("typing-line").innerText = "Error loading data!";
+            }
+        }
+
+        function resetScreen() {
+            // Reset all screen elements to their initial state
+            document.getElementById("typing-line").innerText = "CALCULATION STARTING...";
+            document.getElementById("final-result").innerText = "";
+            document.getElementById("progress").innerHTML = "";
+        }
+
+        function showProgress() {
+            let progressContainer = document.getElementById("progress");
+
+            progressMessages.forEach((message, index) => {
+                setTimeout(() => {
+                    let progressText = document.createElement("div");
+                    progressText.className = "progress-text";
+                    progressText.innerText = message;
+                    progressContainer.appendChild(progressText);
+                }, index * 700);
+            });
+        }
+
+        setInterval(fetchResults, 10000); // Update every 10 seconds
+        fetchResults(); // Initial call to fetch results and start prediction
+
+    </script>
+
+</body>
+</html>
